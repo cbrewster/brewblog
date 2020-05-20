@@ -1,4 +1,6 @@
+use anyhow::{Context, Result};
 use clap::Clap;
+use std::path::PathBuf;
 
 #[derive(Clap, Debug)]
 #[clap(version = "0.1", author = "Connor Brewster")]
@@ -26,19 +28,24 @@ struct NewCommand {
     directory: Option<String>,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let opts = Opts::parse();
 
     match opts.command {
-        Command::New(new_opts) => new_site(new_opts),
+        Command::New(new_opts) => new_site(new_opts)?,
         Command::Build => build(),
         Command::Serve => serve(),
     }
+    Ok(())
 }
 
-fn new_site(opts: NewCommand) {
-    let path = opts.directory.as_ref().unwrap_or(&opts.name);
+fn new_site(opts: NewCommand) -> Result<()> {
+    let path = PathBuf::from(opts.directory.as_ref().unwrap_or(&opts.name));
+
+    std::fs::create_dir_all(&path).with_context(|| format!("Failed to create site directory: {:?}", path))?;
+    
     println!("Creating new site {:?} at {:?}", opts.name, path);
+    Ok(())
 }
 
 fn build() {
