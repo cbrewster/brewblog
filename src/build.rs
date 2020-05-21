@@ -101,14 +101,21 @@ fn build_directory(dir: impl AsRef<Path>, context: &BuildContext) -> Result<()> 
         let metadata = entry.metadata()?;
         if metadata.is_dir() {
             build_directory(entry.path(), context)?;
-        } else if metadata.is_file()
-            && entry
-                .path()
-                .extension()
-                .map(|ext| ext.eq("md"))
-                .unwrap_or(false)
-        {
-            index.push(build_page(entry.path(), context)?);
+        } else if metadata.is_file() {
+            match entry.path().extension().and_then(|ext| ext.to_str()) {
+                Some("md") => index.push(build_page(entry.path(), context)?),
+                Some("toml") => {}
+                // Copy any other file-types to the output
+                // This is useful for things like images
+                _ => {
+                    let entry_path = entry.path();
+                    let out_path = context.output_path(&entry_path)?;
+                    println!("Copying {:?} to {:?}", entry_path, out_path);
+                    std::fs::copy(&entry_path, &out_path).with_context(|| {
+                        format!("Failed to copy file {:?} to {:?}", entry_path, out_path)
+                    })?;
+                }
+            }
         }
     }
 
