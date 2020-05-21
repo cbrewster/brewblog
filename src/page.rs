@@ -86,7 +86,7 @@ impl Page {
         let slug = file_meta.slug.unwrap_or(file_name);
         let out_path = context.page_path(path, &slug)?;
 
-        let link = out_path
+        let link: String = out_path
             .strip_prefix(&context.output_dir)?
             .parent()
             .and_then(|p| p.to_str())
@@ -98,7 +98,7 @@ impl Page {
             author: file_meta.author,
             date: file_meta.date,
             slug,
-            link,
+            link: format!("/{}", link),
             out_path,
             show_date: file_meta.show_date.unwrap_or(true),
         };
