@@ -1,5 +1,6 @@
 mod build;
 mod config;
+mod page;
 
 use crate::build::build;
 use anyhow::{Context, Result};
