@@ -19,6 +19,10 @@ pub struct SiteConfig {
     /// Directory where pages are stored
     #[serde(default = "default_content_dir")]
     pub content_dir: String,
+
+    /// Directory where templates are stored
+    #[serde(default = "default_template_dir")]
+    pub template_dir: String,
 }
 
 fn default_output_dir() -> String {
@@ -27,4 +31,8 @@ fn default_output_dir() -> String {
 
 fn default_content_dir() -> String {
     "content".into()
+}
+
+fn default_template_dir() -> String {
+    "templates".into()
 }

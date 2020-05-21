@@ -1,11 +1,21 @@
 use crate::config::SiteConfig;
 use crate::page::{Page, PageMetadata};
 use anyhow::{Context, Result};
+use serde_derive::Serialize;
 use std::path::{Path, PathBuf};
+use tera::Tera;
 
 pub struct BuildContext {
     pub output_dir: PathBuf,
     pub content_dir: PathBuf,
+    pub templates: Tera,
+    pub site_context: SiteContext,
+}
+
+#[derive(Serialize)]
+pub struct SiteContext {
+    pub title: String,
+    pub tagline: String,
 }
 
 impl BuildContext {
@@ -39,9 +49,19 @@ pub fn build() -> Result<()> {
     std::fs::remove_dir_all(output_dir)?;
     std::fs::create_dir_all(output_dir)?;
 
+    let templates = Tera::new(&format!("{}/**/*.html.tera", config.template_dir))
+        .context("Failed to build templates")?;
+
+    let site_context = SiteContext {
+        title: config.title,
+        tagline: config.tagline,
+    };
+
     let context = BuildContext {
         output_dir: PathBuf::from(&config.output_dir),
         content_dir: PathBuf::from(&config.content_dir),
+        templates,
+        site_context,
     };
 
     build_directory(&config.content_dir, &context)?;
@@ -88,7 +108,15 @@ fn build_page(path: impl AsRef<Path>, context: &BuildContext) -> Result<PageMeta
         )
     })?;
 
-    std::fs::write(&page.metadata.out_path, "<h1>YIPPEE</h1>")
+    let mut template_context = tera::Context::new();
+    template_context.insert("content", &page.content);
+    template_context.insert("page", &page.metadata);
+    template_context.insert("site", &context.site_context);
+    let output = context
+        .templates
+        .render("page.html.tera", &template_context)?;
+
+    std::fs::write(&page.metadata.out_path, output)
         .with_context(|| format!("Failed to write page to {:?}", page.metadata.out_path))?;
 
     Ok(page.metadata)

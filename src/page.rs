@@ -3,7 +3,7 @@
 use crate::build::BuildContext;
 use anyhow::{anyhow, Context, Result};
 use chrono::NaiveDate;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 const META_TAG: &'static str = "@Meta";
@@ -17,7 +17,7 @@ pub struct Page {
 }
 
 /// Metadata about this page
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct PageMetadata {
     /// Title of the page
     pub title: String,
