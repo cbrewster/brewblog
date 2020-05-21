@@ -1,7 +1,7 @@
 use crate::config::SiteConfig;
 use crate::page::{Page, PageMetadata};
 use anyhow::{Context, Result};
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tera::Tera;
 
@@ -18,6 +18,11 @@ pub struct SiteContext {
     pub tagline: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct IndexConfig {
+    pub title: String,
+}
+
 impl BuildContext {
     pub fn output_path(&self, content: impl AsRef<Path>) -> Result<PathBuf> {
         Ok(self
@@ -25,13 +30,14 @@ impl BuildContext {
             .join(content.as_ref().strip_prefix(&self.content_dir)?))
     }
 
-    pub fn page_path(&self, page: impl AsRef<Path>) -> Result<PathBuf> {
+    pub fn page_path(&self, page: impl AsRef<Path>, slug: &str) -> Result<PathBuf> {
         // If this is an index file, if so don't nest in a directory.
         if page.as_ref().file_name().and_then(|f| f.to_str()) == Some("index.md") {
             Ok(self.output_path(page.as_ref())?.with_extension("html"))
         } else {
             Ok(self
                 .output_path(page.as_ref())?
+                .with_file_name(slug)
                 .with_extension("")
                 .join("index")
                 .with_extension("html"))
@@ -42,12 +48,20 @@ impl BuildContext {
 pub fn build() -> Result<()> {
     let config = std::fs::read_to_string("Config.toml").context("Could not open Config.toml")?;
     let config: SiteConfig = toml::from_str(&config).context("Failed to parse Config.toml")?;
-    dbg!(&config);
 
     let output_dir = &config.output_dir;
     // Make sure output directory exists and is empty
     std::fs::remove_dir_all(output_dir)?;
     std::fs::create_dir_all(output_dir)?;
+
+    // Copy public stuff from templates
+    let mut copy_opts = fs_extra::dir::CopyOptions::new();
+    copy_opts.copy_inside = true;
+    fs_extra::dir::copy(
+        &format!("{}/static", config.template_dir),
+        &config.output_dir,
+        &copy_opts,
+    )?;
 
     let templates = Tera::new(&format!("{}/**/*.html.tera", config.template_dir))
         .context("Failed to build templates")?;
@@ -73,7 +87,7 @@ pub fn build() -> Result<()> {
 fn build_directory(dir: impl AsRef<Path>, context: &BuildContext) -> Result<()> {
     println!("Building directory {:?}", dir.as_ref());
     let out_dir = context.output_path(dir.as_ref())?;
-    std::fs::create_dir_all(out_dir)?;
+    std::fs::create_dir_all(&out_dir)?;
 
     let mut index = Vec::new();
 
@@ -82,13 +96,35 @@ fn build_directory(dir: impl AsRef<Path>, context: &BuildContext) -> Result<()> 
         let metadata = entry.metadata()?;
         if metadata.is_dir() {
             build_directory(entry.path(), context)?;
-        } else if metadata.is_file() {
+        } else if metadata.is_file()
+            && entry
+                .path()
+                .extension()
+                .map(|ext| ext.eq("md"))
+                .unwrap_or(false)
+        {
             index.push(build_page(entry.path(), context)?);
         }
     }
 
     // Build index for pages...
-    dbg!(&index);
+    let index_config = dir.as_ref().join("index.toml");
+    dbg!(&index_config);
+    if index_config.exists() {
+        let index_config = std::fs::read_to_string(index_config)?;
+        let index_config: IndexConfig = toml::from_str(&index_config)?;
+
+        let mut template_context = tera::Context::new();
+        template_context.insert("pages", &index);
+        template_context.insert("index", &index_config);
+        template_context.insert("site", &context.site_context);
+        let output = context
+            .templates
+            .render("index.html.tera", &template_context)?;
+
+        std::fs::write(&out_dir.join("index.html"), output)
+            .with_context(|| format!("Failed to write page to {:?}", out_dir))?;
+    }
 
     Ok(())
 }

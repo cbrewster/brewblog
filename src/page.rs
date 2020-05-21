@@ -3,6 +3,7 @@
 use crate::build::BuildContext;
 use anyhow::{anyhow, Context, Result};
 use chrono::NaiveDate;
+use pulldown_cmark::{html, Options, Parser};
 use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -22,11 +23,17 @@ pub struct PageMetadata {
     /// Title of the page
     pub title: String,
 
+    /// Page author
+    pub author: String,
+
     /// Slug of the page, filename by default.
     pub slug: String,
 
     /// Date the page was posted
     pub date: Option<NaiveDate>,
+
+    /// Whether or not the date should be rendered
+    pub show_date: bool,
 
     /// Link to the page
     pub link: String,
@@ -40,8 +47,10 @@ pub struct PageMetadata {
 #[derive(Deserialize, Debug)]
 struct Metadata {
     title: String,
+    author: String,
     slug: Option<String>,
     date: Option<NaiveDate>,
+    show_date: Option<bool>,
 }
 
 impl Page {
@@ -75,17 +84,38 @@ impl Page {
             None => return Err(anyhow!("Failed to get file name for path: {:?}", path)),
         };
 
+        let slug = file_meta.slug.unwrap_or(file_name);
+        let out_path = context.page_path(path, &slug)?;
+
+        let link = out_path
+            .strip_prefix(&context.output_dir)?
+            .parent()
+            .and_then(|p| p.to_str())
+            .context("Failed to generate link")?
+            .into();
+
         let metadata = PageMetadata {
             title: file_meta.title,
+            author: file_meta.author,
             date: file_meta.date,
-            slug: file_meta.slug.unwrap_or(file_name),
-            link: "todo".into(),
-            out_path: context.page_path(path)?,
+            slug,
+            link,
+            out_path,
+            show_date: file_meta.show_date.unwrap_or(true),
         };
 
         let content = file_contents[(content_line + CONTENT_TAG.len())..].into();
-        dbg!(&content);
 
-        Ok(Page { metadata, content })
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        let parser = Parser::new_ext(content, options);
+
+        let mut html_output = String::new();
+        html::push_html(&mut html_output, parser);
+
+        Ok(Page {
+            metadata,
+            content: html_output,
+        })
     }
 }

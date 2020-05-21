@@ -5,7 +5,10 @@ mod page;
 use crate::build::build;
 use anyhow::{Context, Result};
 use clap::Clap;
+use notify::{watcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
+use std::sync::mpsc::channel;
+use std::time::Duration;
 
 #[derive(Clap, Debug)]
 #[clap(version = "0.1", author = "Connor Brewster")]
@@ -35,13 +38,14 @@ struct NewCommand {
     directory: Option<String>,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let opts = Opts::parse();
 
     match opts.command {
         Command::New(new_opts) => new_site(new_opts)?,
         Command::Build => build()?,
-        Command::Serve => serve(),
+        Command::Serve => serve().await?,
     }
     Ok(())
 }
@@ -56,6 +60,34 @@ fn new_site(opts: NewCommand) -> Result<()> {
     Ok(())
 }
 
-fn serve() {
-    println!("Serving...");
+// Simple static file server
+async fn serve() -> Result<()> {
+    println!("Buildig...");
+    build()?;
+    println!("Serving blog at 127.0.0.1:3030");
+
+    let (sender, receiver) = channel();
+    let mut watcher = watcher(sender, Duration::from_secs(2)).unwrap();
+    // TODO: Need to read from config...
+    watcher.watch("content", RecursiveMode::Recursive).unwrap();
+    watcher
+        .watch("templates", RecursiveMode::Recursive)
+        .unwrap();
+    std::thread::spawn(move || loop {
+        match receiver.recv() {
+            Ok(_) => {
+                println!("Building...");
+                if let Err(error) = build() {
+                    println!("{}", error);
+                };
+            }
+            Err(e) => println!("watch error: {}", e),
+        }
+    });
+
+    let static_files = warp::fs::dir("public");
+
+    warp::serve(static_files).run(([127, 0, 0, 1], 3030)).await;
+
+    Ok(())
 }
