@@ -9,4 +9,4 @@ COPY Cargo.lock Cargo.lock
 COPY assets assets
 COPY src src
 
-RUN cargo install --path . 
+RUN cargo install --path . && rm -rf target

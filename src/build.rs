@@ -53,7 +53,9 @@ pub fn build() -> Result<()> {
 
     let output_dir = &config.output_dir;
     // Make sure output directory exists and is empty
-    std::fs::remove_dir_all(output_dir)?;
+    if Path::new(output_dir).exists() {
+        std::fs::remove_dir_all(output_dir)?;
+    }
     std::fs::create_dir_all(output_dir)?;
 
     // Copy public stuff from templates
