@@ -1,3 +1,7 @@
+mod build;
+mod config;
+
+use crate::build::build;
 use anyhow::{Context, Result};
 use clap::Clap;
 use std::path::PathBuf;
@@ -12,8 +16,10 @@ struct Opts {
 #[derive(Clap, Debug)]
 enum Command {
     New(NewCommand),
+
     #[clap(about = "Builds the static site")]
     Build,
+
     #[clap(about = "Builds the static site and serves the site using a local server")]
     Serve,
 }
@@ -33,7 +39,7 @@ fn main() -> Result<()> {
 
     match opts.command {
         Command::New(new_opts) => new_site(new_opts)?,
-        Command::Build => build(),
+        Command::Build => build()?,
         Command::Serve => serve(),
     }
     Ok(())
@@ -42,14 +48,11 @@ fn main() -> Result<()> {
 fn new_site(opts: NewCommand) -> Result<()> {
     let path = PathBuf::from(opts.directory.as_ref().unwrap_or(&opts.name));
 
-    std::fs::create_dir_all(&path).with_context(|| format!("Failed to create site directory: {:?}", path))?;
-    
+    std::fs::create_dir_all(&path)
+        .with_context(|| format!("Failed to create site directory: {:?}", path))?;
+
     println!("Creating new site {:?} at {:?}", opts.name, path);
     Ok(())
-}
-
-fn build() {
-    println!("Building...");
 }
 
 fn serve() {
