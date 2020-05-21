@@ -12,7 +12,7 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 #[derive(Clap, Debug)]
-#[clap(version = "0.1.2", author = "Connor Brewster")]
+#[clap(version = "0.1.3", author = "Connor Brewster")]
 struct Opts {
     #[clap(subcommand)]
     command: Command,
