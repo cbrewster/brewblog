@@ -3,7 +3,6 @@
 use crate::build::BuildContext;
 use anyhow::{anyhow, Context, Result};
 use chrono::NaiveDate;
-use pulldown_cmark::{html, Options, Parser};
 use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -104,14 +103,8 @@ impl Page {
             show_date: file_meta.show_date.unwrap_or(true),
         };
 
-        let content = file_contents[(content_line + CONTENT_TAG.len())..].into();
-
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-        let parser = Parser::new_ext(content, options);
-
-        let mut html_output = String::new();
-        html::push_html(&mut html_output, parser);
+        let content = &file_contents[(content_line + CONTENT_TAG.len())..];
+        let html_output = context.markdown_renderer.render(content);
 
         Ok(Page {
             metadata,

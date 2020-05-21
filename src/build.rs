@@ -1,4 +1,5 @@
 use crate::config::SiteConfig;
+use crate::markdown::MarkdownRenderer;
 use crate::page::{Page, PageMetadata};
 use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
@@ -10,6 +11,7 @@ pub struct BuildContext {
     pub content_dir: PathBuf,
     pub templates: Tera,
     pub site_context: SiteContext,
+    pub markdown_renderer: MarkdownRenderer,
 }
 
 #[derive(Serialize)]
@@ -76,6 +78,7 @@ pub fn build() -> Result<()> {
         content_dir: PathBuf::from(&config.content_dir),
         templates,
         site_context,
+        markdown_renderer: MarkdownRenderer::new(),
     };
 
     build_directory(&config.content_dir, &context)?;
@@ -107,9 +110,13 @@ fn build_directory(dir: impl AsRef<Path>, context: &BuildContext) -> Result<()> 
         }
     }
 
+    index.sort_by(|a, b| match (a.date, b.date) {
+        (Some(a), Some(b)) => b.cmp(&a),
+        _ => std::cmp::Ordering::Equal,
+    });
+
     // Build index for pages...
     let index_config = dir.as_ref().join("index.toml");
-    dbg!(&index_config);
     if index_config.exists() {
         let index_config = std::fs::read_to_string(index_config)?;
         let index_config: IndexConfig = toml::from_str(&index_config)?;

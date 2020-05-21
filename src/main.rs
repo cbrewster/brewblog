@@ -1,5 +1,6 @@
 mod build;
 mod config;
+mod markdown;
 mod page;
 
 use crate::build::build;
