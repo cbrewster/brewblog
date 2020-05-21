@@ -1,10 +1,14 @@
 [package]
 name = "brewblog"
+description = "Another static site generator"
 version = "0.1.0"
 authors = ["Connor Brewster <connor.brewster@eagles.oc.edu>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/cbrewster/brewblog"
+repository = "https://github.com/cbrewster/brewblog"
+keywords = ["static site", "generator", "blog"]
 
 [dependencies]
 anyhow = "1.0"
