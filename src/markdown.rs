@@ -27,8 +27,7 @@ impl MarkdownRenderer {
     }
 
     pub fn render(&self, markdown: &str) -> String {
-        let mut opts = Options::empty();
-        opts.insert(Options::ENABLE_STRIKETHROUGH);
+        let opts = Options::all();
         let mut s = String::with_capacity(&markdown.len() * 3 / 2);
         let p = Parser::new_ext(&markdown, opts);
 
