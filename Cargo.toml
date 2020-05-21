@@ -1,7 +1,7 @@
 [package]
 name = "brewblog"
 description = "Another static site generator"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["Connor Brewster <connor.brewster@eagles.oc.edu>"]
 edition = "2018"
 license = "MIT"

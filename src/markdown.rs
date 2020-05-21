@@ -43,10 +43,13 @@ impl MarkdownRenderer {
 
         for event in p {
             match event {
-                Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(syntax))) => {
+                Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(ref syntax))) => {
                     if !syntax.is_empty() {
                         syntax_highligher =
                             self.syntax_set.find_syntax_by_extension(syntax.as_ref());
+                    }
+                    if syntax_highligher.is_none() {
+                        new_p.push(event);
                     }
                 }
                 Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(_))) => {
@@ -62,6 +65,8 @@ impl MarkdownRenderer {
                         new_p.push(Event::Html(html.into()));
                         to_highlight = String::new();
                         syntax_highligher = None;
+                    } else {
+                        new_p.push(event);
                     }
                 }
                 Event::Text(t) => {
