@@ -5,14 +5,14 @@ mod page;
 
 use crate::build::build;
 use anyhow::{Context, Result};
-use clap::Clap;
+use clap::{crate_version, Clap};
 use notify::{watcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
 #[derive(Clap, Debug)]
-#[clap(version = "0.1.4", author = "Connor Brewster")]
+#[clap(version = crate_version!(), author = "Connor Brewster")]
 struct Opts {
     #[clap(subcommand)]
     command: Command,
